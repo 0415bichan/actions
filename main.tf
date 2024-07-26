@@ -30,9 +30,8 @@ data "aws_subnets" "default" {
 
 resource "aws_key_pair" "deployer" {
   key_name   = "deployer-key"
-  public_key = file("~/.ssh/terra-key.pub")
+  public_key = file("terra-key.pub")
 }
-
 # Security Group
 resource "aws_security_group" "allow_web" {
   name        = "allow_web"
