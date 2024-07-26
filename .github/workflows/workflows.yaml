@@ -32,6 +32,13 @@ jobs:
       - name: Terraform Init
         run: terraform init
 
+      - name: Terraform Plan Destroy
+        run: terraform plan -destroy -out=destroy.tfplan
+
+      - name: Terraform Destroy
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: terraform apply -auto-approve destroy.tfplan
+
       - name: Terraform Plan
         run: terraform plan
 
