@@ -1,4 +1,4 @@
-name: Terraform Apply
+name: Terraform Apply and Destroy
 
 on:
   push:
@@ -26,25 +26,26 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v1
 
-      - name: Create SSH public key file
-        run: echo "${{ secrets.TERRA_PUBLIC_KEY }}" > terra-key.pub
-
       - name: Terraform Init
         run: terraform init
 
-      - name: Terraform Plan Destroy
-        run: terraform plan -destroy -out=destroy.tfplan
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -detailed-exitcode
+        continue-on-error: true
 
       - name: Terraform Destroy
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: terraform apply -auto-approve destroy.tfplan
-
-      - name: Terraform Plan
-        run: terraform plan
+        if: steps.plan.outputs.exitcode == 2
+        run: terraform destroy -auto-approve
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
       - name: Terraform Apply
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: terraform apply -auto-approve
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
       - name: Update AMI ID
         run: |
@@ -60,5 +61,7 @@ jobs:
         run: |
           git config --global user.name 'GitHub Actions'
           git config --global user.email 'actions@github.com'
+          git pull origin main
+          git add .
           git commit -am "Update AMI ID" || echo "No changes to commit"
-          git push
+          git push origin main
