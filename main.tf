@@ -94,7 +94,7 @@ resource "aws_launch_template" "app" {
               # nginx 재시작
               systemctl restart nginx
               # CPU 사용률을 높이는 명령 추가
-              stress-ng --cpu 1 --timeout 300 &
+              # stress-ng --cpu 1 --timeout 300 &
               EOF
   )
 }
