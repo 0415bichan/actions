@@ -90,7 +90,7 @@ resource "aws_launch_template" "app" {
               # 호스트 이름 가져오기
               HOSTNAME=$(hostname)
               # nginx 기본 페이지 수정
-              echo "<h1>Instance ID: $INSTANCE_ID</h1><h2>Hostname: $HOSTNAME</h2>" > /var/www/html/index.html
+              echo "<h1>Instance ID: $INSTANCE_ID</h1><h2>Hostname: $HOSTNAME</h2><h2>hello, world!</h2>" > /var/www/html/index.html
               # nginx 재시작
               systemctl restart nginx
               # CPU 사용률을 높이는 명령 추가
