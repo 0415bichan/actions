@@ -1,0 +1,56 @@
+name: Terraform Apply
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '**.tf'
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    
+    env:
+      AWS_REGION: ap-northeast-2
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v1
+
+    - name: Terraform Init
+      run: terraform init
+
+    - name: Terraform Plan
+      run: terraform plan
+
+    - name: Terraform Apply
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: terraform apply -auto-approve
+
+    - name: Update AMI ID
+      run: |
+        UBUNTU_AMI=$(aws ec2 describe-images \
+          --owners 099720109477 \
+          --filters "Name=name,Values=ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*" \
+                    "Name=state,Values=available" \
+          --query "sort_by(Images, &CreationDate)[-1].ImageId" \
+          --output text)
+        sed -i 's/ami-[a-z0-9]*/'"$UBUNTU_AMI"'/' *.tf
+
+    - name: Commit AMI ID update
+      run: |
+        git config --global user.name 'GitHub Actions'
+        git config --global user.email 'actions@github.com'
+        git commit -am "Update AMI ID" || echo "No changes to commit"
+        git push
