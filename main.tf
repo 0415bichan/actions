@@ -205,7 +205,7 @@ resource "aws_ecs_cluster" "main" {
   name = "main-cluster"
 }
 
-# ECR 리포지토리 생성 (이미 존재)
+# ECR 리포지토리 생성 (django용)
 resource "aws_ecr_repository" "django_app" {
   name = "django-app-repo"
 }
