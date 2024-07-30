@@ -2,26 +2,35 @@
 resource "null_resource" "push_django_image" {
   provisioner "local-exec" {
     command = <<EOF
-      aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin ${aws_ecr_repository.django_app.repository_url}
+      aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin ${data.aws_ecr_repository.django_app.repository_url}
       docker pull wangamy/ttopia-re:latest
-      docker tag wangamy/ttopia-re:latest ${aws_ecr_repository.django_app.repository_url}:latest
-      docker push ${aws_ecr_repository.django_app.repository_url}:latest
+      docker tag wangamy/ttopia-re:latest ${data.aws_ecr_repository.django_app.repository_url}:latest
+      docker push ${data.aws_ecr_repository.django_app.repository_url}:latest
     EOF
   }
-
-  depends_on = [aws_ecr_repository.django_app]
 }
 
 # ECS 서비스가 새 이미지를 사용하도록 강제 업데이트
 resource "null_resource" "force_ecs_deployment" {
   provisioner "local-exec" {
-    command = "aws ecs update-service --cluster ${aws_ecs_cluster.main.name} --service ${aws_ecs_service.app.name} --force-new-deployment --region ap-northeast-2"
+    command = "aws ecs update-service --cluster ${data.aws_ecs_cluster.main.name} --service ${data.aws_ecs_service.app.name} --force-new-deployment --region ap-northeast-2"
   }
 
   depends_on = [
-    null_resource.push_django_image,
-    null_resource.build_and_push_nginx_image,
-    aws_ecs_service.app
+    null_resource.push_django_image
   ]
 }
 
+# 기존 리소스 참조를 위한 data 소스 추가
+data "aws_ecr_repository" "django_app" {
+  name = "django-app-repo"
+}
+
+data "aws_ecs_cluster" "main" {
+  cluster_name = "main-cluster"
+}
+
+data "aws_ecs_service" "app" {
+  cluster_arn = data.aws_ecs_cluster.main.arn
+  service_name = "app-service"
+}
