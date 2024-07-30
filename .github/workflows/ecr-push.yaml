@@ -26,8 +26,11 @@ jobs:
     - name: Terraform Init
       run: terraform init
 
-    - name: Terraform Apply
-      run: terraform apply -auto-approve -target=null_resource.push_django_image -target=null_resource.force_ecs_deployment
+    - name: Terraform Apply Image Changes
+      run: |
+        terraform apply -auto-approve \
+          -target=null_resource.push_django_image \
+          -target=null_resource.force_ecs_deployment
 
     - name: Verify ECS Service Update
       run: |
