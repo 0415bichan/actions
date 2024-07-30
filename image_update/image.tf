@@ -19,7 +19,7 @@ resource "null_resource" "force_ecs_deployment" {
     django_image_update = null_resource.push_django_image.id
   }
   provisioner "local-exec" {
-    command = "aws ecs update-service --cluster ${data.aws_ecr_repository.django_app.repository_url} --service ${data.aws_ecs_service.app.service_name} --force-new-deployment --region ap-northeast-2"
+    command = "aws ecs update-service --cluster ${data.aws_ecs_cluster.main.cluster_name} --service ${data.aws_ecs_service.app.service_name} --force-new-deployment --region ap-northeast-2"
   }
   depends_on = [null_resource.push_django_image]
 }
