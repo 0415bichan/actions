@@ -1,17 +1,18 @@
-name: Update and Apply Image Changes
+name: Update ECR Image
 
+#
 on:
   push:
     paths:
       - 'image.tf'
 
 jobs:
-  update-and-apply:
+  terraform-apply:
     runs-on: ubuntu-latest
-
+    
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v1
@@ -21,17 +22,27 @@ jobs:
         aws-region: ap-northeast-2
 
     - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v1
+      uses: hashicorp/setup-terraform@v2
 
     - name: Terraform Init
       run: terraform init
 
-    - name: Terraform Apply Image Changes
+    - name: Terraform Plan
       run: |
-        terraform apply -auto-approve \
-          -target=null_resource.push_django_image \
-          -target=null_resource.force_ecs_deployment
+        terraform plan -target=null_resource.push_django_image -target=null_resource.force_ecs_deployment -out=tfplan
+        terraform show -json tfplan | jq -r '(.resource_changes[] | select(.change.actions[] != "no-op") | .address)' > changed_resources.txt
 
-    - name: Verify ECS Service Update
+    - name: Check for changes
+      id: check_changes
       run: |
-        aws ecs describe-services --cluster ${{ secrets.ECS_CLUSTER_NAME }} --services ${{ secrets.ECS_SERVICE_NAME }} --query 'services[0].deployments' --output json
+        if [ -s changed_resources.txt ]; then
+          echo "Changes detected"
+          echo "::set-output name=changes::true"
+        else
+          echo "No changes detected"
+          echo "::set-output name=changes::false"
+        fi
+
+    - name: Terraform Apply
+      if: steps.check_changes.outputs.changes == 'true'
+      run: terraform apply -auto-approve -target=null_resource.push_django_image -target=null_resource.force_ecs_deployment
