@@ -3,8 +3,8 @@ resource "null_resource" "push_django_image" {
   provisioner "local-exec" {
     command = <<EOF
       aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin ${aws_ecr_repository.django_app.repository_url}
-      docker pull wangamy/tickettopia-new:latest
-      docker tag wangamy/tickettopia-new:latest ${aws_ecr_repository.django_app.repository_url}:latest
+      docker pull 0415bichan/ttopia-re:latest
+      docker tag 0415bichan/ttopia-re:latest ${aws_ecr_repository.django_app.repository_url}:latest
       docker push ${aws_ecr_repository.django_app.repository_url}:latest
     EOF
   }
