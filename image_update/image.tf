@@ -3,13 +3,12 @@ resource "null_resource" "push_django_image" {
   triggers = {
     always_run = "${timestamp()}"
   }
-
   provisioner "local-exec" {
     command = <<EOF
       aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin ${data.aws_ecr_repository.django_app.repository_url}
-      docker pull wangamy/new-t-t:latest
-      docker tag wangamy/new-t-t:latest ${data.aws_ecr_repository.django_app.repository_url}:latest
-      docker push ${data.aws_ecr_repository.django_app.repository_url}:latest
+      docker build -t 0415bichan/django-app:${var.IMAGE_TAG} .
+      docker tag 0415bichan/django-app:${var.IMAGE_TAG} ${data.aws_ecr_repository.django_app.repository_url}:${var.IMAGE_TAG}
+      docker push ${data.aws_ecr_repository.django_app.repository_url}:${var.IMAGE_TAG}
     EOF
   }
 }
@@ -19,11 +18,9 @@ resource "null_resource" "force_ecs_deployment" {
   triggers = {
     django_image_update = null_resource.push_django_image.id
   }
-
   provisioner "local-exec" {
-    command = "aws ecs update-service --cluster ${data.aws_ecs_cluster.main.cluster_name} --service ${data.aws_ecs_service.app.service_name} --force-new-deployment --region ap-northeast-2"
+    command = "aws ecs update-service --cluster ${data.aws_ecr_repository.django_app.repository_url} --service ${data.aws_ecs_service.app.service_name} --force-new-deployment --region ap-northeast-2"
   }
-
   depends_on = [null_resource.push_django_image]
 }
 
@@ -39,4 +36,10 @@ data "aws_ecs_cluster" "main" {
 data "aws_ecs_service" "app" {
   cluster_arn = data.aws_ecs_cluster.main.arn
   service_name = "app-service"
+}
+
+# 환경변수로 이미지 태그 받기
+variable "IMAGE_TAG" {
+  description = "The tag for the Docker image"
+  type        = string
 }
