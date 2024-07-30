@@ -1,17 +1,17 @@
-name: Update and Apply Image Changes
+name: Update ECR Image
 
 on:
   push:
     paths:
-      - 'image.tf'
+      - 'image_update/**'
 
 jobs:
-  update-and-apply:
+  terraform-apply:
     runs-on: ubuntu-latest
-
+    
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v1
@@ -21,17 +21,12 @@ jobs:
         aws-region: ap-northeast-2
 
     - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v1
+      uses: hashicorp/setup-terraform@v2
 
     - name: Terraform Init
+      working-directory: ./image_update
       run: terraform init
 
-    - name: Terraform Apply Image Changes
-      run: |
-        terraform apply -auto-approve \
-          -target=null_resource.push_django_image \
-          -target=null_resource.force_ecs_deployment
-
-    - name: Verify ECS Service Update
-      run: |
-        aws ecs describe-services --cluster ${{ secrets.ECS_CLUSTER_NAME }} --services ${{ secrets.ECS_SERVICE_NAME }} --query 'services[0].deployments' --output json
+    - name: Terraform Apply
+      working-directory: ./image_update
+      run: terraform apply -auto-approve
