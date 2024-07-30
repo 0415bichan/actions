@@ -1,26 +1,26 @@
-# ECR 리포지토리에 이미지 푸시
-resource "null_resource" "push_images" {
-  triggers = {
-    always_run = "${timestamp()}"
-  }
-
+# Django 앱 이미지 푸시
+resource "null_resource" "push_django_image" {
   provisioner "local-exec" {
     command = <<EOF
-      # AWS ECR 로그인
       aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin ${aws_ecr_repository.django_app.repository_url}
-      aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin ${aws_ecr_repository.nginx.repository_url}
-
-      # Django 애플리케이션 이미지 푸시
       docker pull wangamy/ttopia-re:latest
       docker tag wangamy/ttopia-re:latest ${aws_ecr_repository.django_app.repository_url}:latest
       docker push ${aws_ecr_repository.django_app.repository_url}:latest
-
-      # Nginx 이미지 푸시 (기본 Nginx 이미지 사용)
-      docker pull nginx:latest
-      docker tag nginx:latest ${aws_ecr_repository.nginx.repository_url}:latest
-      docker push ${aws_ecr_repository.nginx.repository_url}:latest
     EOF
   }
 
-  depends_on = [aws_ecr_repository.django_app, aws_ecr_repository.nginx]
+  depends_on = [aws_ecr_repository.django_app]
+}
+
+# ECS 서비스가 새 이미지를 사용하도록 강제 업데이트
+resource "null_resource" "force_ecs_deployment" {
+  provisioner "local-exec" {
+    command = "aws ecs update-service --cluster ${aws_ecs_cluster.main.name} --service ${aws_ecs_service.app.name} --force-new-deployment --region ap-northeast-2"
+  }
+
+  depends_on = [
+    null_resource.push_django_image,
+    null_resource.build_and_push_nginx_image,
+    aws_ecs_service.app
+  ]
 }
