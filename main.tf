@@ -27,7 +27,7 @@ resource "aws_vpc" "main" {
 resource "aws_subnet" "public" {
   vpc_id     = aws_vpc.main.id
   cidr_block = "10.0.1.0/24"
-  availability_zone = "ap-northeast-2a"  # 가용 영역 지정
+  availability_zone = "ap-northeast-2a"  # 가용 영역 지정`
   map_public_ip_on_launch = true
   
   tags = {
@@ -248,6 +248,21 @@ resource "aws_ecr_repository" "nginx" {
     scan_on_push = true
   }
 }
+
+# Nginx 이미지 빌드 및 푸시
+resource "null_resource" "build_and_push_nginx_image" {
+  provisioner "local-exec" {
+    command = <<EOF
+      aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin ${aws_ecr_repository.nginx.repository_url}
+      docker build -t nginx-custom -f Dockerfile .
+      docker tag nginx-custom:latest ${aws_ecr_repository.nginx.repository_url}:latest
+      docker push ${aws_ecr_repository.nginx.repository_url}:latest
+    EOF
+  }
+
+  depends_on = [aws_ecr_repository.nginx]
+}
+
 
 
 # ECS 태스크 정의
