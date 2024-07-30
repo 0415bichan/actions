@@ -7,8 +7,8 @@ resource "null_resource" "push_django_image" {
   provisioner "local-exec" {
     command = <<EOF
       aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin ${data.aws_ecr_repository.django_app.repository_url}
-      docker pull wangamy/newticket:latest
-      docker tag wangamy/newticket:latest ${data.aws_ecr_repository.django_app.repository_url}:latest
+      docker pull wangamy/new-t-t:latest
+      docker tag wangamy/new-t-t:latest ${data.aws_ecr_repository.django_app.repository_url}:latest
       docker push ${data.aws_ecr_repository.django_app.repository_url}:latest
     EOF
   }
@@ -40,3 +40,6 @@ data "aws_ecs_service" "app" {
   cluster_arn = data.aws_ecs_cluster.main.arn
   service_name = "app-service"
 }
+
+도커파일 도커컴포즈파일 메인점티에프 
+환경변수로 가져와서 버전만 다르게 (버전을 환경변수로)
