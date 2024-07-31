@@ -1,3 +1,7 @@
+provider "aws" {
+  region = "ap-northeast-2"
+}
+
 # Django 앱 이미지 푸시
 resource "null_resource" "push_django_image" {
   triggers = {
@@ -9,9 +13,9 @@ resource "null_resource" "push_django_image" {
 aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin ${data.aws_ecr_repository.django_app.repository_url}
 cd tickettopia
 echo "${var.ENV_FILE_CONTENT}" > .env
-docker build -t wangamy/django-app:${var.IMAGE_TAG} .
-docker tag wangamy/django-app:${var.IMAGE_TAG} ${data.aws_ecr_repository.django_app.repository_url}:${var.IMAGE_TAG}
-docker push ${data.aws_ecr_repository.django_app.repository_url}:${var.IMAGE_TAG}
+docker build -t wangamy/django-app:latest .
+docker tag wangamy/django-app:latest ${data.aws_ecr_repository.django_app.repository_url}:latest
+docker push ${data.aws_ecr_repository.django_app.repository_url}:latest
 rm .env
 EOF
   }
@@ -44,13 +48,6 @@ data "aws_ecs_service" "app" {
   service_name = "app-service"
 }
 
-# 환경변수로 이미지 태그 받기
-variable "IMAGE_TAG" {
-  description = "The tag for the Docker image"
-  type        = string
-}
-
-# GitHub Actions secret으로부터 .env 파일 내용을 받기 위한 변수
 variable "ENV_FILE_CONTENT" {
   description = "Content of the .env file"
   type        = string
