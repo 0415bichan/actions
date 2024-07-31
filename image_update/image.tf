@@ -9,8 +9,8 @@ resource "null_resource" "push_django_image" {
 aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin ${data.aws_ecr_repository.django_app.repository_url}
 cd tickettopia
 echo "${var.ENV_FILE_CONTENT}" > .env
-docker build -t 0415bichan/django-app:${var.IMAGE_TAG} .
-docker tag 0415bichan/django-app:${var.IMAGE_TAG} ${data.aws_ecr_repository.django_app.repository_url}:${var.IMAGE_TAG}
+docker build -t wangamy/django-app:${var.IMAGE_TAG} .
+docker tag wangamy/django-app:${var.IMAGE_TAG} ${data.aws_ecr_repository.django_app.repository_url}:${var.IMAGE_TAG}
 docker push ${data.aws_ecr_repository.django_app.repository_url}:${var.IMAGE_TAG}
 rm .env
 EOF
