@@ -54,6 +54,6 @@ jobs:
     - name: Update ECS service
       run: |
         aws ecs update-service \
-          --cluster TicketTopia-cluster \
-          --service TicketTopia-service \
+          --cluster main-cluster \
+          --service app-service \
           --force-new-deployment
