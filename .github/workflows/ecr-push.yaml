@@ -1,36 +1,59 @@
-name: Update ECR Image
+name: Applying TicketTopia app using Terraform
+
 on:
   push:
     branches:
-      - GA
+     - GA
     paths:
-      - 'image_update/**'
       - 'tickettopia/**'
+      - 'nginx/**'
+      - '.github/**'
 
 jobs:
-  terraform-apply:
+  deploy:
     runs-on: ubuntu-latest
+    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-northeast-2
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ap-northeast-2
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Terraform Init
-        working-directory: ./image_update
-        run: terraform init
+    - name: Build and push Nginx image to ECR
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: tickettopia-nginx
+        IMAGE_TAG: latest
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./nginx
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
-      - name: Terraform Apply
-        working-directory: ./image_update
-        env:
-          TF_VAR_IMAGE_TAG: ${{ github.sha }}
-          TF_VAR_ENV_FILE_CONTENT: ${{ secrets.ENV_FILE_CONTENT }}
-        run: terraform apply -auto-approve
+    - name: Create .env file
+      run: echo "${{ secrets.ENV_FILE_CONTENT }}" > .env
+
+    - name: Build and push Django app image to ECR
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: tickettopia-django-app
+        IMAGE_TAG: latest
+      run: |
+        docker build \
+          --build-arg ENV_FILE=.env \
+          -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./tickettopia
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+    - name: Update ECS service
+      run: |
+        aws ecs update-service \
+          --cluster TicketTopia-cluster \
+          --service TicketTopia-service \
+          --force-new-deployment
