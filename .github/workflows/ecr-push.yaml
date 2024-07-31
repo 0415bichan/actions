@@ -1,7 +1,8 @@
 name: Update ECR Image
-
 on:
   push:
+    branches:
+      - GA
     paths:
       - 'image_update/**'
       - 'tickettopia/**'
