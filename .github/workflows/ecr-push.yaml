@@ -57,3 +57,6 @@ jobs:
           --cluster main-cluster \
           --service app-service \
           --force-new-deployment
+
+          #
+          
